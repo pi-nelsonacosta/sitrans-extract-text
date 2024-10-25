@@ -59,7 +59,6 @@ async def extract_text_from_image(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al procesar la imagen: {str(e)}")
 
-
 # Nueva ruta para extraer texto con OCR desde imágenes (.png, .jpg) usando EasyOCR
 @router.post("/extract-ocr-easy/")
 async def extract_text_with_easyocr(file: UploadFile = File(...)):
@@ -75,7 +74,7 @@ async def extract_text_with_easyocr(file: UploadFile = File(...)):
 
     try:
         # Inicializar el lector de EasyOCR
-        reader = easyocr.Reader(['es'])  # Cambia 'en' si necesitas otros idiomas
+        reader = easyocr.Reader(['es', 'en'])  # Cambia 'en' si necesitas otros idiomas
 
         # Cargar la imagen con PIL
         imagen = Image.open(BytesIO(file_content)).convert('RGB')  # Convertir a RGB

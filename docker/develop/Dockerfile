@@ -22,8 +22,8 @@ COPY ./main.py /app/main.py
 COPY ./requirements.txt /app/requirements.txt
 
 # Instalar dependencias de Python
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r /app/requirements.txt
+RUN pip install --upgrade pip && \
+    pip install -r /app/requirements.txt
 
 # Exponer el puerto para la API de FastAPI
 EXPOSE 8000

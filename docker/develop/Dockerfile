@@ -16,18 +16,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Copiar solo el archivo de dependencias y luego instalarlas
+COPY ./requirements.txt /app/requirements.txt
+RUN pip install --upgrade pip && \
+    pip install -r /app/requirements.txt
+
 # Copiar los archivos del proyecto al contenedor
 COPY ./app /app/app
 COPY ./main.py /app/main.py
-COPY ./requirements.txt /app/requirements.txt
-
-# Instalar dependencias de Python
-RUN pip install --upgrade pip && \
-    pip install -r /app/requirements.txt
 
 # Exponer el puerto para la API de FastAPI
 EXPOSE 8000
 
 # Comando para ejecutar la API con Uvicorn
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+
 

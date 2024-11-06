@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, BackgroundTasks, UploadFile, File, HTTPException, Response
 from PIL import Image
 from app.business.use_cases.extract_text import ExtractTextFromPDF
 import pytesseract
@@ -9,56 +9,6 @@ import numpy as np
 from autogen import UserProxyAgent, AssistantAgent, GroupChat, GroupChatManager
 
 router = APIRouter()
-
-# Ruta para extraer texto de PDFs
-@router.post("/extract-text/")
-async def extract_text_from_pdf(file: UploadFile = File(...)):
-    if not file.filename.endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="El archivo debe ser un PDF")
-
-    # Leer el archivo PDF subido en memoria
-    try:
-        file_content = await file.read()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al leer el archivo: {str(e)}")
-    
-    # Crear el servicio extractor para PDFs
-    pdf_extractor = PDFExtractor(file_stream=file_content)
-    
-    # Crear el caso de uso y ejecutarlo
-    use_case = ExtractTextFromPDF(extractor=pdf_extractor)
-    
-    try:
-        texto_extraido = use_case.execute()
-    except ValueError as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    
-    return {"texto": texto_extraido}    
-
-
-# Ruta para extraer texto con OCR desde imágenes (.png, .jpg) usando pytesseract
-@router.post("/extract-ocr/")
-async def extract_text_from_image(file: UploadFile = File(...)):
-    # Verificar si el archivo es una imagen válida
-    if not file.filename.endswith((".png", ".jpg", ".jpeg")):
-        raise HTTPException(status_code=400, detail="El archivo debe ser una imagen (.png, .jpg, .jpeg)")
-
-    # Leer el archivo de imagen subido
-    try:
-        file_content = await file.read()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al leer el archivo: {str(e)}")
-    
-    try:
-        # Cargar la imagen con PIL
-        imagen = Image.open(BytesIO(file_content))
-
-        # Aplicar OCR a la imagen con pytesseract
-        texto_ocr = pytesseract.image_to_string(imagen)
-
-        return {"texto_ocr": texto_ocr}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al procesar la imagen: {str(e)}")
 
 ############ Seccion de agentes y configuraciones ############ 
 # Define llm_config to use in GroupChatManager
@@ -126,56 +76,87 @@ def state_transition(last_speaker, groupchat):
     if last_speaker is user_proxy:
         return validation_agent
     elif last_speaker is validation_agent:
-        return None
+       return None
 
+# Función de procesamiento en segundo plano
+async def organize_extracted_text(texto_extraido: str):
+    groupchat = GroupChat(
+        agents=[user_proxy, validation_agent],
+        messages=[],
+        max_round=3,
+        speaker_selection_method=state_transition,
+    )
+    manager = GroupChatManager(groupchat=groupchat, llm_config=llm_config)
+    
+    user_proxy.initiate_chat(manager, message=texto_extraido)
+    responses = [message["content"] for message in groupchat.messages]
+    return responses   
 
-# Nueva ruta para extraer texto con OCR desde imágenes (.png, .jpg) usando EasyOCR
-@router.post("/extract-ocr-easy/")
-async def extract_text_with_easyocr(file: UploadFile = File(...)):
-    # Verificar si el archivo es una imagen válida
+# Función para extraer texto de un PDF en segundo plano y luego procesarlo
+async def extract_text_from_pdf_background(file_content: bytes, background_tasks: BackgroundTasks):
+    pdf_extractor = PDFExtractor(file_stream=file_content)
+    use_case = ExtractTextFromPDF(extractor=pdf_extractor)
+    try:
+        texto_extraido = use_case.execute()
+        background_tasks.add_task(organize_extracted_text, texto_extraido)
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=str(e)) 
+
+# Función para extraer texto de una imagen en segundo plano y luego procesarlo
+async def extract_text_from_image_background(file_content: bytes, background_tasks: BackgroundTasks, use_easyocr: bool = False):
+    try:
+        if use_easyocr:
+            reader = easyocr.Reader(['es', 'en'])
+            imagen = Image.open(BytesIO(file_content)).convert('RGB')
+            imagen_np = np.array(imagen)
+            result = reader.readtext(imagen_np)
+            texto_extraido = "\n".join([res[1] for res in result])
+        else:
+            imagen = Image.open(BytesIO(file_content))
+            texto_ocr = pytesseract.image_to_string(imagen)
+            texto_extraido = texto_ocr
+
+        background_tasks.add_task(organize_extracted_text, texto_extraido)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al procesar la imagen: {str(e)}")       
+
+@router.post("/extract-text/")
+async def extract_text_from_pdf(background_tasks: BackgroundTasks,file: UploadFile = File(...)):
+    if not file.filename.endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="El archivo debe ser un PDF")
+
+    try:
+        file_content = await file.read()
+        background_tasks.add_task(extract_text_from_pdf_background, file_content, background_tasks)
+        return Response(content='{"status": "El texto está siendo extraído y procesado en segundo plano."}', media_type="application/json", status_code=202)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al leer el archivo: {str(e)}")   
+
+# Ruta para manejar la subida de imágenes y ejecutar la extracción y procesamiento en segundo plano con pytesseract
+@router.post("/extract-ocr/")
+async def extract_text_from_image( background_tasks: BackgroundTasks,file: UploadFile = File(...)):
     if not file.filename.endswith((".png", ".jpg", ".jpeg")):
         raise HTTPException(status_code=400, detail="El archivo debe ser una imagen (.png, .jpg, .jpeg)")
 
-    # Leer el archivo de imagen subido
     try:
         file_content = await file.read()
+        background_tasks.add_task(extract_text_from_image_background, file_content, background_tasks, False)
+        return Response(content='{"status": "El texto OCR está siendo extraído y procesado en segundo plano."}', media_type="application/json", status_code=202)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al leer el archivo: {str(e)}")
 
+# Ruta para manejar la subida de imágenes y ejecutar la extracción y procesamiento en segundo plano con EasyOCR
+@router.post("/extract-ocr-easy/")
+async def extract_text_with_easyocr(background_tasks: BackgroundTasks,file: UploadFile = File(...)):
+    if not file.filename.endswith((".png", ".jpg", ".jpeg")):
+        raise HTTPException(status_code=400, detail="El archivo debe ser una imagen (.png, .jpg, .jpeg)")
+
     try:
-        # Inicializar el lector de EasyOCR
-        reader = easyocr.Reader(['es', 'en'])  # Cambia 'en' si necesitas otros idiomas
-
-        # Cargar la imagen con PIL
-        imagen = Image.open(BytesIO(file_content)).convert('RGB')  # Convertir a RGB
-        imagen_np = np.array(imagen)  # Convertir la imagen a un array de numpy para EasyOCR
-
-        # Aplicar OCR con EasyOCR
-        result = reader.readtext(imagen_np)
-
-        # Extraer solo el texto del resultado de EasyOCR
-        texto_extraido = "\n".join([res[1] for res in result])
-        
-        groupchat = GroupChat(
-            agents=[user_proxy, validation_agent],
-            messages=[],
-            max_round=3,
-            speaker_selection_method=state_transition,
-            )
-    
-        manager = GroupChatManager(groupchat=groupchat, llm_config=llm_config)
-    
-        # Initiate the chat
-        user_proxy.initiate_chat(
-            manager, message=texto_extraido
-            )
-    
-        # Gather the output messages
-        responses = [message["content"] for message in groupchat.messages]
-        return {"responses": responses}    
-    
+        file_content = await file.read()
+        background_tasks.add_task(extract_text_from_image_background, file_content, background_tasks, True)
+        return Response(content='{"status": "El texto OCR está siendo extraído con EasyOCR y procesado en segundo plano."}', media_type="application/json", status_code=202)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al procesar la imagen con EasyOCR: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error al leer el archivo: {str(e)}")
 
 
 

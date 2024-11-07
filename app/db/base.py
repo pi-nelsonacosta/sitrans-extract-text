@@ -14,7 +14,8 @@ engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Configuración de SQLAlchemy para SQL Server
-SQLSERVER_URL = os.getenv("SQLSERVER_URL", "mssql+pyodbc://sa:Development123!@sqlserver:1433?driver=ODBC+Driver+17+for+SQL+Server")
+SQLSERVER_URL = os.getenv("SQLSERVER_URL", "mssql+pymssql://sa:Development123!@sqlserver:1433/tempdb")
+
 sqlserver_engine = create_engine(SQLSERVER_URL)
 SQLServerSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sqlserver_engine)
 

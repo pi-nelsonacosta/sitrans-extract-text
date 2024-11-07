@@ -39,7 +39,8 @@ services:
     environment:
       - DATABASE_URL=mysql+pymysql://root:root_password@mysql:3306/clean_architecture_db
       - MONGODB_URI=mongodb://mongodb:27017
-      - SQLSERVER_URL=mssql+pyodbc://sa:Development123!@sqlserver:1433
+      - SQLSERVER_URL=mssql+pymssql://sa:Development123!@sqlserver:1433/tempdb
+
     ports:
       - "8000:8000"
     depends_on:

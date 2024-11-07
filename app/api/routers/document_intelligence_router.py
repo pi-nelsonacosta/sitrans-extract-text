@@ -1,4 +1,4 @@
-from fastapi import APIRouter, BackgroundTasks, UploadFile, File, HTTPException, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, UploadFile, File, HTTPException, Response
 from PIL import Image
 from app.business.use_cases.extract_text import ExtractTextFromPDF
 import pytesseract
@@ -7,10 +7,23 @@ from app.services.document_intelligence_service import PDFExtractor  # Para PDF 
 import easyocr  # Importamos EasyOCR
 import numpy as np
 from autogen import UserProxyAgent, AssistantAgent, GroupChat, GroupChatManager
+from sqlalchemy.orm import Session
+from app.db.base import SQLServerSessionLocal
+from app.db.repository.sqlserver_repository import create_sqlserver_record, get_all_sqlserver_records
+
 
 router = APIRouter()
 
 ############ Seccion de agentes y configuraciones ############ 
+
+# Dependencia para obtener la sesión de SQL Server
+def get_db():
+    db = SQLServerSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+        
 # Define llm_config to use in GroupChatManager
 llm_config = {
     "cache_seed": 42,
@@ -51,6 +64,64 @@ validation_prompt = '''
     Validación de Consistencia: Revisa la coherencia en la nomenclatura de las claves y asegura que los valores estén alineados con el contexto que representan.
     Propuesta de Mejoras: Proporciona recomendaciones para mejorar la claridad o estructura de la información si es necesario.
     El objetivo es garantizar que el texto estructurado sea claro, preciso y siga las mejores prácticas para su uso futuro.
+    Necesito que mejores los datos procesados y que generes un Json de la siguiente manera:
+    { 
+
+   "DIN":{ 
+
+      "solicitud":"", 
+
+      "numeroDin":"", 
+
+      "fechaDin":"””", 
+
+      "aduana":"", 
+
+      "consignatarioOimportador":"””", 
+
+      "rutConsignatario":"””", 
+
+      "paisOrigen":"””", 
+
+      "puertoEmbarque":"””", 
+
+      "puertoDesembarque":"””", 
+
+      "manifiesto":"””", 
+
+      "doctoTransporte":"””", 
+
+      "bultos":[ 
+
+         { 
+
+            "numeroBulto":"", 
+
+            "tipoBulto":"””", 
+
+            "cantTipoBulto":"””" 
+
+         } 
+
+      ], 
+
+      "totalBultos":"””", 
+
+      "pesoBruto":"””", 
+
+      "observacionesBultos":"””", 
+
+      "totalEnPesos":"””", 
+
+      "tipoInspeccion":"””", 
+
+      "resultado":"””", 
+
+      "direccionConsignatario":"””" 
+
+   } 
+
+} 
     '''
 
 # Define the agent configuration
@@ -90,7 +161,23 @@ async def organize_extracted_text(texto_extraido: str):
     
     user_proxy.initiate_chat(manager, message=texto_extraido)
     responses = [message["content"] for message in groupchat.messages]
-    return responses   
+    # Asumimos que responses[0] contiene el JSON generado
+    json_result = responses[0]
+    
+    # Crear una nueva sesión de SQL Server
+    db: Session = SQLServerSessionLocal()
+    
+    try:
+        # Reutilizar el método existente para crear un registro
+        create_sqlserver_record(db=db, description='Testing')
+        print("JSON guardado correctamente en SQL Server.")
+    except Exception as e:
+        print(f"Error al guardar en SQL Server: {e}")
+        raise e
+    finally:
+        db.close() 
+    
+    return responses
 
 # Función para extraer texto de un PDF en segundo plano y luego procesarlo
 async def extract_text_from_pdf_background(file_content: bytes, background_tasks: BackgroundTasks):
@@ -157,6 +244,16 @@ async def extract_text_with_easyocr(background_tasks: BackgroundTasks,file: Uplo
         return Response(content='{"status": "El texto OCR está siendo extraído con EasyOCR y procesado en segundo plano."}', media_type="application/json", status_code=202)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al leer el archivo: {str(e)}")
+
+# Endpoint para obtener todos los registros
+@router.get("/sqlserver/records", response_model=list[dict])
+def get_all_records(db: Session = Depends(get_db)):
+    try:
+        records = get_all_sqlserver_records(db)
+        # Convertir los objetos SQLAlchemy a un formato JSON-serializable
+        return [{"id": r.id, "name": r.name, "description": r.description} for r in records]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener los registros: {str(e)}")    
 
 
 

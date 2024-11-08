@@ -37,24 +37,48 @@ async def extract_text_from_image( background_tasks: BackgroundTasks,file: Uploa
 
 # Ruta para manejar la subida de imágenes y ejecutar la extracción y procesamiento en segundo plano con EasyOCR
 @router.post("/extract-ocr-easy/")
-async def extract_text_with_easyocr(background_tasks: BackgroundTasks,file: UploadFile = File(...)):
+async def extract_text_with_easyocr(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+    """
+    Ruta para manejar la subida de imágenes y ejecutar la extracción OCR en segundo plano.
+    """
     if not file.filename.endswith((".png", ".jpg", ".jpeg")):
         raise HTTPException(status_code=400, detail="El archivo debe ser una imagen (.png, .jpg, .jpeg)")
 
     try:
         file_content = await file.read()
-        background_tasks.add_task(extract_text_from_image_background, file_content, background_tasks, True)
-        #insert_extraction_request(ExtractionRequest(filename='Testing', status="En proceso", created_at=datetime.utcnow()))
-        return Response(content='{"status": "El texto OCR está siendo extraído con EasyOCR y procesado en segundo plano."}', media_type="application/json", status_code=202)
+
+        # Insertar documento en MongoDB con estado inicial
+        extraction_request = ExtractionRequest(
+            filename=file.filename,
+            status="En proceso",
+            created_at=datetime.utcnow(),
+            din={}  # Inicialmente vacío, puedes llenarlo cuando el OCR termine
+        )
+        inserted_id = await insert_extraction_request(extraction_request)
+        print(f"Documento insertado con ID: {inserted_id}")
+
+        # Agregar tarea en segundo plano para procesar OCR
+        background_tasks.add_task(
+            extract_text_from_image_background, file_content, background_tasks, True
+        )
+
+        return Response(
+            content='{"status": "El texto OCR está siendo extraído con EasyOCR y procesado en segundo plano."}',
+            media_type="application/json",
+            status_code=202
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al leer el archivo: {str(e)}")
-
+    
 @router.get("/mongo/records", response_model=list[dict])
-def get_all_records(db: Session = Depends(get_db)):
+async def get_all_records():
+    """
+    Recupera todos los registros de MongoDB y los devuelve en formato JSON.
+    """
     try:
-        records = get_all_extraction_requests(db)
-        # Convertir los objetos SQLAlchemy a un formato JSON-serializable
-        return [{"id": r.id, "name": r.name, "description": r.description} for r in records]
+        records = await get_all_extraction_requests()
+        # Convertir los registros a un formato serializable si es necesario
+        return [{"id": str(r["_id"]), "filename": r["filename"], "status": r["status"]} for r in records]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener los registros: {str(e)}")
 

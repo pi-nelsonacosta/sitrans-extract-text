@@ -3,17 +3,19 @@ from app.db.base import mongo_db
 
 
 async def insert_extraction_request(data: ExtractionRequest):
-    collection = mongo_db["extraction_requests"]  # Colección específica
-    result = await collection.insert_one(collection)
+    """
+    Inserta un documento en la colección `extraction_requests`.
+    """
+    collection = mongo_db["extraction_requests"]  # Acceso a la colección
+    document = data.dict(by_alias=True)  # Convierte el modelo Pydantic a un diccionario
+    result = await collection.insert_one(document)  # Inserta el documento
     return str(result.inserted_id)
 
+
 async def get_all_extraction_requests():
-    collection = mongo_db["extraction_requests"]  # Colección específica
-    cursor = collection.find({})
-    records = []
-    async for document in cursor:
-        # Convertir `_id` de ObjectId a string para que sea serializable
-        document["id"] = str(document["_id"])
-        del document["_id"]
-        records.append(document)
+    """
+    Recupera todos los documentos de la colección `extraction_requests` en MongoDB.
+    """
+    collection = mongo_db["extraction_requests"]
+    records = await collection.find().to_list(length=100)  # Traer hasta 100 registros
     return records

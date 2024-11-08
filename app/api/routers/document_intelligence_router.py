@@ -4,7 +4,7 @@ from requests import Session
 from app.business.document_extract_values.extract_text import extract_text_from_image_background, extract_text_from_pdf_background
 from app.db.init_db import get_db
 from app.db.models.mongo_log_model import ExtractionRequest
-from app.db.repository.mongo_log_repository import get_all_extraction_requests, insert_extraction_request
+from app.db.repository.mongo_log_repository import delete_all_extraction_requests, get_all_extraction_requests, insert_extraction_request
 
 router = APIRouter()
 
@@ -37,7 +37,7 @@ async def extract_text_from_image( background_tasks: BackgroundTasks,file: Uploa
 
 # Ruta para manejar la subida de imágenes y ejecutar la extracción y procesamiento en segundo plano con EasyOCR
 @router.post("/extract-ocr-easy/")
-async def extract_text_with_easyocr(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+async def extract_text_with_easyocr(background_tasks: BackgroundTasks, file: UploadFile = File(...), use_easyocr: bool = True):
     """
     Ruta para manejar la subida de imágenes y ejecutar la extracción OCR en segundo plano.
     """
@@ -59,7 +59,10 @@ async def extract_text_with_easyocr(background_tasks: BackgroundTasks, file: Upl
 
         # Agregar tarea en segundo plano para procesar OCR
         background_tasks.add_task(
-            extract_text_from_image_background, file_content, background_tasks, True
+            extract_text_from_image_background,
+            file_content,  # El contenido del archivo
+            str(inserted_id),  # El ID del documento en MongoDB
+            use_easyocr  # Si se utiliza EasyOCR o no
         )
 
         return Response(
@@ -81,6 +84,17 @@ async def get_all_records():
         return [{"id": str(r["_id"]), "filename": r["filename"], "status": r["status"]} for r in records]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener los registros: {str(e)}")
+
+@router.delete("/mongo/records")
+async def delete_all_records():
+    """
+    Elimina todos los registros de la colección `extraction_requests` en MongoDB.
+    """
+    try:
+        result = await delete_all_extraction_requests()
+        return {"status": "success", "deleted_count": result["deleted_count"]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al borrar los registros: {str(e)}")    
 
 
 

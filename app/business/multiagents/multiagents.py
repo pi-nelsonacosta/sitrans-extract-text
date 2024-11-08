@@ -1,6 +1,10 @@
+from fastapi import HTTPException
 from autogen import UserProxyAgent, AssistantAgent, GroupChat, GroupChatManager
 from app.core.config import LLM_CONFIG as llm_config
 from app.business.prompts.prompts_extract import task, validation_prompt
+from bson import ObjectId
+from datetime import datetime
+from app.db.base import mongo_db
 
 # Define the agent configuration
 user_proxy = UserProxyAgent(
@@ -28,16 +32,35 @@ def state_transition(last_speaker, groupchat):
        return None
 
 # Función de procesamiento en segundo plano
-async def organize_extracted_text(texto_extraido: str):
-    groupchat = GroupChat(
-        agents=[user_proxy, validation_agent],
-        messages=[],
-        max_round=3,
-        speaker_selection_method=state_transition,
-    )
-    manager = GroupChatManager(groupchat=groupchat, llm_config=llm_config)
-    
-    user_proxy.initiate_chat(manager, message=texto_extraido)
-    responses = [message["content"] for message in groupchat.messages]
-        
-    return responses
+async def organize_extracted_text(texto_extraido: str, document_id: str):
+    """
+    Procesa el texto extraído y actualiza el estado del documento en MongoDB a "Terminado".
+    """
+    try:
+        groupchat = GroupChat(
+            agents=[user_proxy, validation_agent],
+            messages=[],
+            max_round=3,
+            speaker_selection_method=state_transition,
+        )
+        manager = GroupChatManager(groupchat=groupchat, llm_config=llm_config)
+
+        user_proxy.initiate_chat(manager, message=texto_extraido)
+        responses = [message["content"] for message in groupchat.messages]
+
+        # Actualizar el estado del documento en MongoDB
+        collection = mongo_db["extraction_requests"]
+        await collection.update_one(
+            {"_id": ObjectId(document_id)},
+            {
+                "$set": {
+                    "status": "Terminado",
+                    "completed_at": datetime.utcnow(),
+                    "din": responses,  # Puedes guardar las respuestas aquí si es necesario
+                }
+            }
+        )
+
+        return responses
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al procesar el texto: {str(e)}")

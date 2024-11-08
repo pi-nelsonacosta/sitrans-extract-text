@@ -19,3 +19,11 @@ async def get_all_extraction_requests():
     collection = mongo_db["extraction_requests"]
     records = await collection.find().to_list(length=100)  # Traer hasta 100 registros
     return records
+
+async def delete_all_extraction_requests():
+    """
+    Elimina todos los documentos de la colección `extraction_requests` en MongoDB.
+    """
+    collection = mongo_db["extraction_requests"]
+    result = await collection.delete_many({})  # Eliminar todos los documentos
+    return {"deleted_count": result.deleted_count}  # Devuelve el número de documentos eliminados

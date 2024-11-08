@@ -40,7 +40,8 @@ COPY ./main.py /app/main.py
 # Exponer el puerto para la API de FastAPI
 EXPOSE 8000
 
-# Comando para ejecutar la API con Uvicorn
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Comando para ejecutar la API con Gunicorn con Uvicorn Workers
+CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "-w", "4", "-b", "0.0.0.0:8000", "main:app"]
+
 
 

@@ -29,20 +29,28 @@ async def extract_text_from_pdf_background(file_content: bytes, background_tasks
     except ValueError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# Función para extraer texto de una imagen en segundo plano y luego procesarlo
-async def extract_text_from_image_background(file_content: bytes, background_tasks: BackgroundTasks, use_easyocr: bool = False):
+async def extract_text_from_image_background(file_content: bytes, document_id: str, use_easyocr: bool):
+    """
+    Procesa la imagen con OCR y llama a la función de procesamiento del texto extraído.
+    """
     try:
         if use_easyocr:
+            # Procesar la imagen con EasyOCR
             reader = easyocr.Reader(['es', 'en'])
             imagen = Image.open(BytesIO(file_content)).convert('RGB')
             imagen_np = np.array(imagen)
             result = reader.readtext(imagen_np)
             texto_extraido = "\n".join([res[1] for res in result])
         else:
+            # Procesar la imagen con PyTesseract
             imagen = Image.open(BytesIO(file_content))
             texto_ocr = pytesseract.image_to_string(imagen)
             texto_extraido = texto_ocr
 
-        background_tasks.add_task(organize_extracted_text, texto_extraido)
+        # Agregar lógica para procesar el texto extraído, como actualizar MongoDB
+        await organize_extracted_text(texto_extraido, document_id)
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al procesar la imagen: {str(e)}")             
+        raise HTTPException(status_code=500, detail=f"Error al procesar la imagen: {str(e)}")
+
+            

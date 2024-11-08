@@ -19,18 +19,7 @@ services:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
-
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: sqlserver_container
-    environment:
-      ACCEPT_EULA: "Y"
-      SA_PASSWORD: "Development123!"  # Contraseña básica para desarrollo
-    ports:
-      - "1433:1433"
-    volumes:
-      - sqlserver_data:/var/opt/mssql
-
+ 
   api:
     build:
       context: ../../
@@ -48,6 +37,18 @@ services:
       - mongodb
       - sqlserver
     command: uvicorn main:app --host 0.0.0.0 --port 8000
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sqlserver_container
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "Development123!"  # Contraseña básica para desarrollo
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+      - ./app/app/db/init.sql:/app/app/db/init.sql  # Montar el archivo init.sql dentro del contenedor  
 
 volumes:
   mysql_data:

@@ -1,18 +1,12 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, UploadFile, File, HTTPException, Response
 from app.business.use_cases.extract_text import extract_text_from_image_background, extract_text_from_pdf_background
 from sqlalchemy.orm import Session
-from app.db.base import SQLServerSessionLocal
 from app.db.repository.sqlserver_repository import create_sqlserver_record, get_all_sqlserver_records
+from app.db.init_db import get_db
 
 router = APIRouter()
 
-# Dependencia para obtener la sesión de SQL Server
-def get_db():
-    db = SQLServerSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+db = get_db()
 
 @router.post("/extract-text/")
 async def extract_text_from_pdf(background_tasks: BackgroundTasks,file: UploadFile = File(...)):

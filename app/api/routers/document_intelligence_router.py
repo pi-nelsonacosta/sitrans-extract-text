@@ -1,7 +1,5 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, UploadFile, File, HTTPException, Response
-from app.business.use_cases.extract_text import extract_text_from_image_background, extract_text_from_pdf_background
-from sqlalchemy.orm import Session
-from app.db.repository.sqlserver_repository import create_sqlserver_record, get_all_sqlserver_records
+from fastapi import APIRouter, BackgroundTasks, UploadFile, File, HTTPException, Response
+from app.business.document_extract_values.extract_text import extract_text_from_image_background, extract_text_from_pdf_background
 from app.db.init_db import get_db
 
 router = APIRouter()
@@ -46,15 +44,7 @@ async def extract_text_with_easyocr(background_tasks: BackgroundTasks,file: Uplo
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al leer el archivo: {str(e)}")
 
-# Endpoint para obtener todos los registros
-@router.get("/sqlserver/records", response_model=list[dict])
-def get_all_records(db: Session = Depends(get_db)):
-    try:
-        records = get_all_sqlserver_records(db)
-        # Convertir los objetos SQLAlchemy a un formato JSON-serializable
-        return [{"id": r.id, "name": r.name, "description": r.description} for r in records]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al obtener los registros: {str(e)}")    
+
 
 
 

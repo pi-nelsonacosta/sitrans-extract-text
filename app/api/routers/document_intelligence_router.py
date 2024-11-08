@@ -1,6 +1,10 @@
-from fastapi import APIRouter, BackgroundTasks, UploadFile, File, HTTPException, Response
+from datetime import datetime
+from fastapi import APIRouter, BackgroundTasks, Depends, UploadFile, File, HTTPException, Response
+from requests import Session
 from app.business.document_extract_values.extract_text import extract_text_from_image_background, extract_text_from_pdf_background
 from app.db.init_db import get_db
+from app.db.models.mongo_log_model import ExtractionRequest
+from app.db.repository.mongo_log_repository import get_all_extraction_requests, insert_extraction_request
 
 router = APIRouter()
 
@@ -40,10 +44,19 @@ async def extract_text_with_easyocr(background_tasks: BackgroundTasks,file: Uplo
     try:
         file_content = await file.read()
         background_tasks.add_task(extract_text_from_image_background, file_content, background_tasks, True)
+        #insert_extraction_request(ExtractionRequest(filename='Testing', status="En proceso", created_at=datetime.utcnow()))
         return Response(content='{"status": "El texto OCR está siendo extraído con EasyOCR y procesado en segundo plano."}', media_type="application/json", status_code=202)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al leer el archivo: {str(e)}")
 
+@router.get("/mongo/records", response_model=list[dict])
+def get_all_records(db: Session = Depends(get_db)):
+    try:
+        records = get_all_extraction_requests(db)
+        # Convertir los objetos SQLAlchemy a un formato JSON-serializable
+        return [{"id": r.id, "name": r.name, "description": r.description} for r in records]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener los registros: {str(e)}")
 
 
 

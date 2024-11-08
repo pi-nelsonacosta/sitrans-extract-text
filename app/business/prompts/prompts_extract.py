@@ -113,6 +113,7 @@ validation_prompt = '''
 
 } 
     '''  
+
 """ 
 validation_prompt = '''
     Task: Como agente de validación, tu objetivo es revisar y garantizar la calidad del texto estructurado generado mediante OCR, asegurándote de que se haya seguido correctamente el proceso de organización en un formato de clave. El texto estructurado se presenta en formato JSON, y debes realizar las siguientes tareas:

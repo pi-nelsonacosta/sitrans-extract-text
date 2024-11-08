@@ -16,7 +16,7 @@ user_proxy = UserProxyAgent(
 
 validation_agent = AssistantAgent(
     name="validation_agent",
-    system_message=task + validation_prompt,
+    system_message=validation_prompt,
     llm_config={"config_list": llm_config["config_list"]}
 )
 
@@ -39,20 +39,5 @@ async def organize_extracted_text(texto_extraido: str):
     
     user_proxy.initiate_chat(manager, message=texto_extraido)
     responses = [message["content"] for message in groupchat.messages]
-    # Asumimos que responses[0] contiene el JSON generado
-    """ json_result = responses[0]
-    
-    # Crear una nueva sesión de SQL Server
-    db: Session = SQLServerSessionLocal()
-    
-    try:
-        # Reutilizar el método existente para crear un registro
-        create_sqlserver_record(db=db, description='Testing')
-        print("JSON guardado correctamente en SQL Server.")
-    except Exception as e:
-        print(f"Error al guardar en SQL Server: {e}")
-        raise e
-    finally:
-        db.close()  """
-    
+        
     return responses

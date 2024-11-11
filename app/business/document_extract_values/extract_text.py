@@ -1,6 +1,6 @@
 # business/use_cases/extract_text.py
 from fastapi import BackgroundTasks, HTTPException
-from app.business.multiagents.multiagents import organize_extracted_text
+from app.business.multiagents.multiagents import organize_extracted_text, organize_extracted_text_AFORO, organize_extracted_text_TGR
 from app.services.document_intelligence_service import PDFExtractor
 import easyocr  # Importamos EasyOCR
 import numpy as np
@@ -41,16 +41,51 @@ async def extract_text_from_image_background(file_content: bytes, document_id: s
             imagen_np = np.array(imagen)
             result = reader.readtext(imagen_np)
             texto_extraido = "\n".join([res[1] for res in result])
+            ocr_engine = "EASY-OCR"
         else:
             # Procesar la imagen con PyTesseract
             imagen = Image.open(BytesIO(file_content))
             texto_ocr = pytesseract.image_to_string(imagen)
             texto_extraido = texto_ocr
+            ocr_engine = "PyTesseract"
 
-        # Agregar lógica para procesar el texto extraído, como actualizar MongoDB
-        await organize_extracted_text(texto_extraido, document_id)
+        # Llamar a la función para organizar el texto extraído
+        await organize_extracted_text(texto_extraido, document_id, ocr_engine)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al procesar la imagen: {str(e)}")
+
+async def extract_text_from_aforo(file_content: bytes):
+    """
+    Procesa la imagen con OCR y llama a la función de procesamiento del texto extraído.
+    """
+    try:
+        # Procesar la imagen con PyTesseract
+        imagen = Image.open(BytesIO(file_content))
+        texto_ocr = pytesseract.image_to_string(imagen)
+        texto_extraido = texto_ocr
+        
+        # Llamar a la función para organizar el texto extraído
+        await organize_extracted_text_AFORO(texto_extraido)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al procesar la imagen: {str(e)}")
+
+async def extract_text_from_tgr(file_content: bytes):
+    """
+    Procesa la imagen con OCR y llama a la función de procesamiento del texto extraído.
+    """
+    try:
+        # Procesar la imagen con PyTesseract
+        imagen = Image.open(BytesIO(file_content))
+        texto_ocr = pytesseract.image_to_string(imagen)
+        texto_extraido = texto_ocr
+        
+        # Llamar a la función para organizar el texto extraído
+        await organize_extracted_text_TGR(texto_extraido)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al procesar la imagen: {str(e)}")    
+
 
             

@@ -114,8 +114,7 @@ validation_prompt = '''
 } 
     '''  
 
-""" 
-validation_prompt = '''
+validation_prompt_TGR = '''
     Task: Como agente de validación, tu objetivo es revisar y garantizar la calidad del texto estructurado generado mediante OCR, asegurándote de que se haya seguido correctamente el proceso de organización en un formato de clave. El texto estructurado se presenta en formato JSON, y debes realizar las siguientes tareas:
     Verificar que cada clave sea clara, concisa y representativa del contenido del valor.
     Comprobar que no existan errores tipográficos en las claves o valores, asegurando coherencia en la nomenclatura.
@@ -155,5 +154,46 @@ validation_prompt = '''
       "identificadorTransaccion":"””" 
 
    } 
-    '''   """ 
+    '''  
     
+validation_prompt_AFORO = '''
+    Task: Como agente de validación, tu objetivo es revisar y garantizar la calidad del texto estructurado generado mediante OCR, asegurándote de que se haya seguido correctamente el proceso de organización en un formato de clave. El texto estructurado se presenta en formato JSON, y debes realizar las siguientes tareas:
+    Verificar que cada clave sea clara, concisa y representativa del contenido del valor.
+    Comprobar que no existan errores tipográficos en las claves o valores, asegurando coherencia en la nomenclatura.
+    Asegurarse de que no haya información duplicada o categorizada incorrectamente.
+    Confirmar que se sigan los estándares de estructura JSON, garantizando que el formato sea consistente y fácil de procesar.
+    Identificar posibles inconsistencias o faltas de alineación entre claves y valores y sugerir correcciones.
+    Chain-of-Thought:
+    Revisión de Claves: Revisa cada clave y asegúrate de que sea descriptiva y represente de manera precisa el valor asociado. Sugerir mejores nombres si es necesario.
+    Verificación de Estructura: Comprueba que la estructura JSON esté bien formada, sin errores de sintaxis y siguiendo estándares de buena práctica.
+    Control de Calidad de Datos: Verifica que no haya datos repetidos y que cada segmento de información esté correctamente categorizado.
+    Validación de Consistencia: Revisa la coherencia en la nomenclatura de las claves y asegura que los valores estén alineados con el contexto que representan.
+    Propuesta de Mejoras: Proporciona recomendaciones para mejorar la claridad o estructura de la información si es necesario.
+    El objetivo es garantizar que el texto estructurado sea claro, preciso y siga las mejores prácticas para su uso futuro.
+    Necesito que mejores los datos procesados y que generes un Json de la siguiente manera:
+    { 
+
+   "Aforo":{ 
+
+      "solicitud":"", 
+
+      "folioDIN":"", 
+
+      "fechaAceptacion":"””", 
+
+      "numeroEncriptado":"", 
+
+      "codigoAgente":"””", 
+
+      "nombreAgente":"””", 
+
+      "codigoAduanaTramitacion":"””", 
+
+      "tipoRevision":"””", 
+
+      "FirmaAgencia":"””" 
+
+   } 
+
+} 
+    '''  

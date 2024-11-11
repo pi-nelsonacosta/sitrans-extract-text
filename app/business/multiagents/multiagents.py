@@ -5,6 +5,7 @@ from app.business.prompts.prompts_extract import task, validation_prompt
 from bson import ObjectId
 from datetime import datetime
 from app.db.base import mongo_db
+from bson import json_util
 
 # Define the agent configuration
 user_proxy = UserProxyAgent(
@@ -50,6 +51,7 @@ async def organize_extracted_text(texto_extraido: str, document_id: str):
 
         # Actualizar el estado del documento en MongoDB
         collection = mongo_db["extraction_requests"]
+        responses = json_util.dumps(responses)  # Serializa el campo si es necesario
         await collection.update_one(
             {"_id": ObjectId(document_id)},
             {

@@ -76,12 +76,20 @@ async def extract_text_with_easyocr(background_tasks: BackgroundTasks, file: Upl
 @router.get("/mongo/records", response_model=list[dict])
 async def get_all_records():
     """
-    Recupera todos los registros de MongoDB y los devuelve en formato JSON.
+    Recupera los campos `din`, `created_at`, y `completed_at` de MongoDB.
     """
     try:
         records = await get_all_extraction_requests()
-        # Convertir los registros a un formato serializable si es necesario
-        return [{"id": str(r["_id"]), "filename": r["filename"], "status": r["status"]} for r in records]
+
+        # Incluye los campos requeridos en la respuesta
+        return [
+            {
+                "din": r.get("din"),
+                "created_at": r.get("created_at"),
+                "completed_at": r.get("completed_at"),
+            }
+            for r in records
+        ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener los registros: {str(e)}")
 

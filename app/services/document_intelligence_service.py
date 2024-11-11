@@ -2,6 +2,8 @@ import fitz  # PyMuPDF
 import pytesseract
 from PIL import Image
 import io
+from pymongo import ReturnDocument
+from app.db.base import mongo_db
 
 class PDFExtractor:
     def __init__(self, file_stream):
@@ -61,3 +63,26 @@ class PDFOCRExtractor:
 
         documento.close()  # Cerrar el PDF al finalizar
         return "\n".join(textos)
+
+async def fetch_all_records():
+    """
+    Recupera todos los registros de la colección `extraction_requests`.
+    """
+    try:
+        collection = mongo_db["extraction_requests"]
+        records = await collection.find({}, {"din": 1, "created_at": 1, "completed_at": 1}).to_list(length=None)
+        return records
+    except Exception as e:
+        raise Exception(f"Error al recuperar registros: {str(e)}")
+
+
+async def remove_all_records():
+    """
+    Elimina todos los registros de la colección `extraction_requests`.
+    """
+    try:
+        collection = mongo_db["extraction_requests"]
+        result = await collection.delete_many({})
+        return {"deleted_count": result.deleted_count}
+    except Exception as e:
+        raise Exception(f"Error al eliminar registros: {str(e)}")

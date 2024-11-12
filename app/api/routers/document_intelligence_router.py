@@ -1,10 +1,7 @@
 from datetime import datetime
 import json
 from fastapi import APIRouter, BackgroundTasks, UploadFile, File, HTTPException, Response
-from requests import Session
-from app.business.tgr_processing import extract_text_from_tgr
 from app.db.init_db import get_db
-from app.db.models.mongo_log_model import ExtractionRequest
 from app.services.document_intelligence_service import fetch_all_records, handle_din_extraction, handle_extract_aforo_text, handle_extract_text_tgr, remove_all_records
 
 router = APIRouter()

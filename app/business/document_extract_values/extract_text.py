@@ -1,7 +1,7 @@
 # business/use_cases/extract_text.py
 from fastapi import BackgroundTasks, HTTPException
 from app.business.multiagents.multiagents import organize_extracted_text
-from app.services.document_intelligence_service import PDFExtractor
+from app.business.pdf_extractor import PDFExtractor
 import easyocr  # Importamos EasyOCR
 import numpy as np
 from PIL import Image
@@ -19,7 +19,7 @@ class ExtractTextFromPDF:
         except ValueError as e:
             raise ValueError(f"Fallo en la extracción de texto: {str(e)}")
 
-# Función para extraer texto de un PDF en segundo plano y luego procesarlo
+""" # Función para extraer texto de un PDF en segundo plano y luego procesarlo
 async def extract_text_from_pdf_background(file_content: bytes, background_tasks: BackgroundTasks):
     pdf_extractor = PDFExtractor(file_stream=file_content)
     use_case = ExtractTextFromPDF(extractor=pdf_extractor)
@@ -27,7 +27,7 @@ async def extract_text_from_pdf_background(file_content: bytes, background_tasks
         texto_extraido = use_case.execute()
         background_tasks.add_task(organize_extracted_text, texto_extraido)
     except ValueError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) """
 
 async def extract_text_from_image_background(file_content: bytes, document_id: str, use_easyocr: bool):
     """

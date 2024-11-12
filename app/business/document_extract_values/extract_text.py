@@ -6,7 +6,8 @@ import easyocr  # Importamos EasyOCR
 import numpy as np
 from PIL import Image
 from io import BytesIO
-import pytesseract
+from pytesseract import image_to_string
+from PIL import Image, UnidentifiedImageError
 
 class ExtractTextFromPDF:
     def __init__(self, extractor: PDFExtractor):
@@ -29,31 +30,43 @@ async def extract_text_from_pdf_background(file_content: bytes, background_tasks
     except ValueError as e:
         raise HTTPException(status_code=500, detail=str(e)) """
 
-async def extract_text_from_image_background(file_content: bytes, document_id: str, use_easyocr: bool):
+def validate_image_format(file_content):
+    try:
+        # Intentar abrir como imagen para verificar el formato
+        imagen = Image.open(BytesIO(file_content))
+        imagen.verify()  # Verifica si es una imagen válida
+        return True
+    except UnidentifiedImageError:
+        return False
+    except Exception:
+        return False        
+
+async def extract_text_from_image_background(file_content, document_id: str, use_easyocr: bool):
     """
-    Procesa la imagen con OCR y llama a la función de procesamiento del texto extraído.
+    Procesa la imagen con OCR y organiza el texto extraído.
     """
     try:
+        if isinstance(file_content, Image.Image):
+            imagen = file_content  # Si ya es una imagen, úsala directamente
+        else:
+            raise TypeError("file_content debe ser de tipo PIL.Image.Image.")
+
         if use_easyocr:
-            # Procesar la imagen con EasyOCR
             reader = easyocr.Reader(['es', 'en'])
-            imagen = Image.open(BytesIO(file_content)).convert('RGB')
             imagen_np = np.array(imagen)
             result = reader.readtext(imagen_np)
             texto_extraido = "\n".join([res[1] for res in result])
             ocr_engine = "EASY-OCR"
         else:
-            # Procesar la imagen con PyTesseract
-            imagen = Image.open(BytesIO(file_content))
-            texto_ocr = pytesseract.image_to_string(imagen)
-            texto_extraido = texto_ocr
+            texto_extraido = image_to_string(imagen, lang="eng+spa")
             ocr_engine = "PyTesseract"
 
-        # Llamar a la función para organizar el texto extraído
         await organize_extracted_text(texto_extraido, document_id, ocr_engine)
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al procesar la imagen: {str(e)}")
+        # Registrar el error y no interrumpir el flujo de la tarea
+        print(f"Error al procesar la imagen en segundo plano: {str(e)}")
+
 
    
 

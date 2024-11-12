@@ -1,6 +1,10 @@
+from datetime import datetime
 from fastapi import BackgroundTasks, HTTPException
 from app.business.aforo_processing import extract_text_from_aforo
+from app.business.document_extract_values.extract_text import extract_text_from_image_background
 from app.business.tgr_processing import extract_text_from_tgr
+from app.db.models.mongo_log_model import ExtractionRequest
+from app.db.repository.mongo_log_repository import insert_extraction_request
 import fitz  # PyMuPDF
 import pytesseract
 from PIL import Image
@@ -107,7 +111,7 @@ async def handle_extract_aforo_text(background_tasks: BackgroundTasks, file_cont
     except Exception as e:
         raise Exception(f"Error al procesar el archivo: {str(e)}")
 
-async def handle_extract_aforo_tgr(background_tasks: BackgroundTasks, file_content: bytes):
+async def handle_extract_text_tgr(background_tasks: BackgroundTasks, file_content: bytes):
     """
     Maneja la extracción de texto OCR para aforo en segundo plano.
     """
@@ -120,41 +124,31 @@ async def handle_extract_aforo_tgr(background_tasks: BackgroundTasks, file_conte
         background_tasks.add_task(extract_text_from_tgr, file_content)
     except Exception as e:
         raise Exception(f"Error al procesar el archivo: {str(e)}")
-    
 
+async def handle_din_extraction(background_tasks: BackgroundTasks, file_content: bytes, filename: str, use_easyocr: bool):
+    """
+    Maneja la extracción de texto DIN.
+    """
+    try:
+        # Insertar documento en MongoDB con estado inicial
+        extraction_request = ExtractionRequest(
+            filename=filename,
+            status="En proceso",
+            created_at=datetime.utcnow(),
+            din={}  # Inicialmente vacío, se llenará al completar OCR
+        )
+        inserted_id = await insert_extraction_request(extraction_request)
+        print(f"Documento insertado con ID: {inserted_id}")
 
-# Document Intelligence Service
+        # Agregar tarea en segundo plano para procesar OCR
+        background_tasks.add_task(
+            extract_text_from_image_background,
+            file_content,  # El contenido del archivo
+            str(inserted_id),  # El ID del documento en MongoDB
+            use_easyocr  # Si se utiliza EasyOCR o no
+        )
 
-"""
-This code sample shows Prebuilt Document operations with the Azure Form Recognizer client library. 
-The async versions of the samples require Python 3.6 or later.
+        return {"status": "El texto OCR está siendo extraído con EasyOCR y procesado en segundo plano."}
 
-To learn more, please visit the documentation - Quickstart: Form Recognizer Python client library SDKs
-https://learn.microsoft.com/azure/applied-ai-services/form-recognizer/quickstarts/get-started-v3-sdk-rest-api?view=doc-intel-3.1.0&pivots=programming-language-python
-"""
-"""
-Remember to remove the key from your code when you're done, and never post it publicly. For production, use
-secure methods to store and access your credentials. For more information, see 
-https://docs.microsoft.com/en-us/azure/cognitive-services/cognitive-services-security?tabs=command-line%2Ccsharp#environment-variables-and-application-configuration
-"""
-""" endpoint = "YOUR_FORM_RECOGNIZER_ENDPOINT"
-key = "YOUR_FORM_RECOGNIZER_KEY"
-
-# sample document
-formUrl = "https://raw.githubusercontent.com/Azure-Samples/cognitive-services-REST-api-samples/master/curl/form-recognizer/sample-layout.pdf"
-
-document_analysis_client = DocumentAnalysisClient(
-        endpoint=endpoint, credential=AzureKeyCredential(key)
-    )
-    
-poller = document_analysis_client.begin_analyze_document_from_url("prebuilt-document", formUrl)
-result = poller.result()
-
-print("----Key-value pairs found in document----")
-for kv_pair in result.key_value_pairs:
-    if kv_pair.key and kv_pair.value:
-        print("Key '{}': Value: '{}'".format(kv_pair.key.content, kv_pair.value.content))
-    else:
-        print("Key '{}': Value:".format(kv_pair.key.content))
-
-print("----------------------------------------") """
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al procesar la solicitud: {str(e)}")    

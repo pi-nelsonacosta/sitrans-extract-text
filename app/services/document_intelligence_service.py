@@ -15,8 +15,6 @@ from pdf2image import convert_from_bytes
 from PIL import Image, UnidentifiedImageError
 from io import BytesIO
 
-
-
 class PDFOCRExtractor:
     def __init__(self, file_stream):
         """Inicializa el extractor con un archivo PDF en memoria."""

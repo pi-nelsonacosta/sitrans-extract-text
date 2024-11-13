@@ -1,12 +1,12 @@
-from datetime import datetime
-import json
 from fastapi import APIRouter, BackgroundTasks, UploadFile, File, HTTPException, Response
-from app.db.init_db import get_db
-from app.services.document_intelligence_service import fetch_all_records, handle_din_extraction, handle_extract_aforo_text, handle_extract_text_tgr, remove_all_records
+from app.services.document_intelligence_service import fetch_all_records 
+from app.services.document_intelligence_service import handle_din_extraction 
+from app.services.document_intelligence_service import handle_extract_aforo_text 
+from app.services.document_intelligence_service import handle_extract_text_tgr 
+from app.services.document_intelligence_service import remove_all_records
+import json
 
 router = APIRouter()
-
-db = get_db()
 
 # Ruta para manejar la subida de imágenes y ejecutar la extracción y procesamiento en segundo plano con pytesseract
 @router.post("/extract-aforo-text/")
@@ -15,7 +15,7 @@ async def extract_text_from_image_aforo(
     file: UploadFile = File(...),
 ):
     """
-    Procesa un archivo (PDF o imagen) para extraer texto de aforo mediante OCR.
+    Procesa un archivo PDF para extraer texto de aforo mediante OCR.
     """
     if not file.filename.endswith((".png", ".jpg", ".jpeg", ".pdf")):
         raise HTTPException(status_code=400, detail="El archivo debe ser una imagen (.png, .jpg, .jpeg) o un PDF.")
@@ -70,8 +70,14 @@ async def extract_din_text(
 
     try:
         file_content = await file.read()
-        response = await handle_din_extraction(background_tasks, file_content, file.filename, use_easyocr)
-        return Response(content=json.dumps(response), media_type="application/json", status_code=202)
+        response = await handle_din_extraction(background_tasks, 
+                                               file_content, 
+                                               file.filename, 
+                                               use_easyocr)
+        
+        return Response(content=json.dumps(response), 
+                        media_type="application/json", 
+                        status_code=202)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al procesar la solicitud: {str(e)}")
 
@@ -94,7 +100,6 @@ async def get_all_records():
         ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener los registros: {str(e)}")
-
 
 @router.delete("/mongo/records")
 async def delete_all_records():

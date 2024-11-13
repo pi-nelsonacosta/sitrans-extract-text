@@ -20,16 +20,6 @@ class ExtractTextFromPDF:
         except ValueError as e:
             raise ValueError(f"Fallo en la extracción de texto: {str(e)}")
 
-""" # Función para extraer texto de un PDF en segundo plano y luego procesarlo
-async def extract_text_from_pdf_background(file_content: bytes, background_tasks: BackgroundTasks):
-    pdf_extractor = PDFExtractor(file_stream=file_content)
-    use_case = ExtractTextFromPDF(extractor=pdf_extractor)
-    try:
-        texto_extraido = use_case.execute()
-        background_tasks.add_task(organize_extracted_text, texto_extraido)
-    except ValueError as e:
-        raise HTTPException(status_code=500, detail=str(e)) """
-
 def validate_image_format(file_content):
     try:
         # Intentar abrir como imagen para verificar el formato
@@ -67,6 +57,15 @@ async def extract_text_from_image_background(file_content, document_id: str, use
         # Registrar el error y no interrumpir el flujo de la tarea
         print(f"Error al procesar la imagen en segundo plano: {str(e)}")
 
+""" # Función para extraer texto de un PDF en segundo plano y luego procesarlo
+async def extract_text_from_pdf_background(file_content: bytes, background_tasks: BackgroundTasks):
+    pdf_extractor = PDFExtractor(file_stream=file_content)
+    use_case = ExtractTextFromPDF(extractor=pdf_extractor)
+    try:
+        texto_extraido = use_case.execute()
+        background_tasks.add_task(organize_extracted_text, texto_extraido)
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=str(e)) """
 
    
 

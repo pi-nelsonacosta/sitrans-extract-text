@@ -9,10 +9,11 @@ import json
 router = APIRouter()
 
 # Ruta para manejar la subida de imágenes y ejecutar la extracción y procesamiento en segundo plano con pytesseract
-@router.post("/extract-aforo-text/")
-async def extract_text_from_image_aforo(
+@router.post("/extract-text-sitrans/")
+async def extract_text_sitrans(
     background_tasks: BackgroundTasks, 
-    file: UploadFile = File(...),
+    file: UploadFile,
+    file_type: str
 ):
     """
     Procesa un archivo PDF para extraer texto de aforo mediante OCR.
@@ -22,92 +23,23 @@ async def extract_text_from_image_aforo(
 
     try:
         file_content = await file.read()
-        await handle_extract_aforo_text(background_tasks, file_content)
-        return Response(
-            content='{"status": "El texto OCR está siendo extraído y procesado en segundo plano."}', 
-            media_type="application/json", 
-            status_code=202
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al procesar la solicitud: {str(e)}")
-    
-
-# Ruta para manejar la subida de imágenes y ejecutar la extracción y procesamiento en segundo plano con pytesseract
-@router.post("/extract-tgr-text/")
-async def extract_text_from_image_tgr( 
-    background_tasks: BackgroundTasks,
-    file: UploadFile = File(...)):
-    """
-    Procesa una imagen para extraer texto de TGR mediante OCR.
-    """
-    
-    if not file.filename.endswith((".png", ".jpg", ".jpeg", ".pdf")):
-        raise HTTPException(status_code=400, detail="El archivo debe ser una imagen (.png, .jpg, .jpeg) o un PDF.")
-
-    try:
-        file_content = await file.read()
-        await handle_extract_text_tgr(background_tasks, file_content)
-        return Response(
-            content='{"status": "El texto OCR está siendo extraído y procesado en segundo plano."}', 
-            media_type="application/json", 
-            status_code=202
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al procesar la solicitud: {str(e)}")     
-    
-# Ruta para manejar la subida de imágenes y ejecutar la extracción y procesamiento en segundo plano con EasyOCR
-@router.post("/extract-din-text/")
-async def extract_din_text(
-    background_tasks: BackgroundTasks,
-    file: UploadFile = File(...),
-    use_easyocr: bool = True
-):
-    """
-    Ruta para manejar la subida de imágenes y ejecutar la extracción OCR en segundo plano.
-    """
-    if not file.filename.endswith((".png", ".jpg", ".jpeg", ".pdf")):
-        raise HTTPException(status_code=400, detail="El archivo debe ser una imagen (.png, .jpg, .jpeg) o un PDF.")
-
-    try:
-        file_content = await file.read()
-        response = await handle_din_extraction(background_tasks, 
+        if file_type == "AFORO":
+            await handle_extract_aforo_text(background_tasks, file_content)
+        elif file_type == "TGR":
+            await handle_extract_text_tgr(background_tasks, file_content)
+        elif file_type == "DIN":
+            await handle_din_extraction(background_tasks, 
                                                file_content, 
                                                file.filename, 
-                                               use_easyocr)
-        
-        return Response(content=json.dumps(response), 
-                        media_type="application/json", 
-                        status_code=202)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al procesar la solicitud: {str(e)}")
+                                               True)
+        else:
+            raise HTTPException(status_code=400, detail="Tipo de archivo no soportado.")
 
-@router.get("/mongo/records", response_model=list[dict])
-async def get_all_records():
-    """
-    Recupera los campos `din`, `created_at`, y `completed_at` de MongoDB.
-    """
-    try:
-        records = await fetch_all_records()
-
-        # Incluye los campos requeridos en la respuesta
-        return [
-            {
-                "din": r.get("din"),
-                "created_at": r.get("created_at"),
-                "completed_at": r.get("completed_at"),
-            }
-            for r in records
-        ]
+        return Response(
+            content=f'{{"status": "El texto OCR de tipo {file_type} está siendo extraído y procesado en segundo plano."}}', 
+            media_type="application/json", 
+            status_code=202
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al obtener los registros: {str(e)}")
-
-@router.delete("/mongo/records")
-async def delete_all_records():
-    """
-    Elimina todos los registros de la colección `extraction_requests` en MongoDB.
-    """
-    try:
-        result = await remove_all_records()
-        return {"status": "success", "deleted_count": result["deleted_count"]}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al borrar los registros: {str(e)}")   
+        raise HTTPException(status_code=500, detail=f"Error al procesar la solicitud para {file_type}: {str(e)}")
+   

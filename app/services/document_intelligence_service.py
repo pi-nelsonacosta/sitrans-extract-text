@@ -1,10 +1,10 @@
+import base64
 from datetime import datetime
 from fastapi import BackgroundTasks, HTTPException
-import pdfplumber
-from app.business.aforo_processing import extract_text_from_aforo
+import requests
+from app.business.aforo_processing import organize_extracted_text_AFORO
 from app.business.document_extract_values.extract_text import extract_text_from_image_background
-from app.business.tgr_processing import extract_text_from_tgr
-from app.business.pdf_extractor import PDFExtractor
+from app.business.tgr_processing import organize_extracted_text_TGR
 from app.db.models.mongo_log_model import ExtractionRequest
 from app.db.repository.mongo_log_repository import insert_extraction_request
 import fitz  # PyMuPDF
@@ -12,8 +12,11 @@ import pytesseract
 import io
 from app.db.base import mongo_db
 from pdf2image import convert_from_bytes
-from PIL import Image, UnidentifiedImageError
+from PIL import Image
 from io import BytesIO
+import json
+from dotenv import load_dotenv
+from openai import OpenAI
 
 class PDFOCRExtractor:
     def __init__(self, file_stream):
@@ -75,75 +78,25 @@ async def remove_all_records():
     except Exception as e:
         raise Exception(f"Error al eliminar registros: {str(e)}")
 
-async def handle_extract_aforo_text(background_tasks: BackgroundTasks, file_content: bytes):
+async def handle_extract_aforo_text():
     """
-    Maneja la extracción de texto OCR para aforo en segundo plano, procesando PDFs e imágenes.
+    Maneja la extracción de texto OCR para documentos TGR en segundo plano.
     """
     try:
-        if not file_content:
-            raise HTTPException(status_code=400, detail="El contenido del archivo está vacío.")
-
-        # Intenta verificar si el archivo es un PDF con texto seleccionable
-        try:
-            with pdfplumber.open(io.BytesIO(file_content)) as pdf:
-                full_text = ""
-                for page in pdf.pages:
-                    text = page.extract_text()
-                    if text:  # Si el texto seleccionable está presente
-                        full_text += text + "\n"
-
-                # Si se encontró texto seleccionable, procesa directamente
-                if full_text.strip():
-                    print("Texto seleccionable encontrado en el PDF.")
-                    return {"status": "success", "text": full_text}
-
-        except Exception:
-            print("El archivo no es un PDF seleccionable. Se procederá con OCR.")
-
-        # Si no es seleccionable, convertir PDF a imágenes
-        images = convert_from_bytes(file_content, dpi=300)
-
-        # Agregar cada imagen como tarea en segundo plano para el procesamiento
-        for image in images:
-            background_tasks.add_task(extract_text_from_aforo, image)
-
+    
+        await organize_extracted_text_AFORO()
         return {"status": "El texto OCR está siendo extraído y procesado en segundo plano."}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al procesar el archivo: {str(e)}")
 
-async def handle_extract_text_tgr(background_tasks: BackgroundTasks, file_content: bytes):
+async def handle_extract_text_tgr():
     """
     Maneja la extracción de texto OCR para documentos TGR en segundo plano.
     """
     try:
-        if not file_content:
-            raise HTTPException(status_code=400, detail="El contenido del archivo está vacío.")
-
-        # Intenta verificar si el archivo es un PDF con texto seleccionable
-        try:
-            with pdfplumber.open(io.BytesIO(file_content)) as pdf:
-                full_text = ""
-                for page in pdf.pages:
-                    text = page.extract_text()
-                    if text:  # Si el texto seleccionable está presente
-                        full_text += text + "\n"
-
-                # Si se encontró texto seleccionable, procesa directamente
-                if full_text.strip():
-                    print("Texto seleccionable encontrado en el PDF.")
-                    return {"status": "success", "text": full_text}
-
-        except Exception:
-            print("El archivo no es un PDF seleccionable. Se procederá con OCR.")
-
-        # Si no es seleccionable, convertir PDF a imágenes
-        images = convert_from_bytes(file_content, dpi=300)
-
-        # Agregar cada imagen como tarea en segundo plano para el procesamiento
-        for image in images:
-            background_tasks.add_task(extract_text_from_tgr, image)
-
+    
+        await organize_extracted_text_TGR()
         return {"status": "El texto OCR está siendo extraído y procesado en segundo plano."}
 
     except Exception as e:

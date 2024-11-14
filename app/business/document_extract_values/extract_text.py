@@ -1,6 +1,5 @@
 # business/use_cases/extract_text.py
 from fastapi import BackgroundTasks, HTTPException
-from app.business.multiagents.multiagents import organize_extracted_text
 from app.business.pdf_extractor import PDFExtractor
 import easyocr  # Importamos EasyOCR
 import numpy as np

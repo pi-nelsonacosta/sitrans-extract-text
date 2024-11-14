@@ -1,19 +1,10 @@
-from fastapi import APIRouter, BackgroundTasks, UploadFile, File, HTTPException, Response, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Response, Query
 from app.services.document_intelligence_service import handle_din_extraction 
 from app.services.document_intelligence_service import handle_extract_aforo_text 
 from app.services.document_intelligence_service import handle_extract_text_tgr 
-import json
 import httpx
-from typing import Optional
-from enum import Enum
 
 router = APIRouter()
-
-# Definir los tipos de archivo como un Enum
-class FileType(str, Enum):
-    AFORO = "AFORO"
-    TGR = "TGR"
-    DIN = "DIN"
 
 # Ruta para manejar la subida de imágenes y ejecutar la extracción y procesamiento en segundo plano con pytesseract
 @router.post("/extract-text-sitrans/")
@@ -50,9 +41,9 @@ async def extract_text_sitrans(
 
         # Procesar el archivo dependiendo del tipo
         if file_type == "AFORO":
-            await handle_extract_aforo_text()
+            await handle_extract_aforo_text(file_content)
         elif file_type == "TGR":
-            await handle_extract_text_tgr()
+            await handle_extract_text_tgr(file_content)
         elif file_type == "DIN":
             await handle_din_extraction(
                 background_tasks,

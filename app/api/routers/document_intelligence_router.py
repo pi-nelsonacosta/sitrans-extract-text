@@ -1,9 +1,10 @@
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Response, Query, UploadFile, File, Form
 from enum import Enum
-import httpx
-from app.services.document_intelligence_service import organize_extracted_text_AFORO, process_file_input
+from app.services.document_intelligence_service import organize_extracted_text_AFORO 
 from app.services.document_intelligence_service import organize_extracted_text_DIN
 from app.services.document_intelligence_service import organize_extracted_text_TGR
+from app.services.document_intelligence_service import process_file_input
+from typing import List
 
 router = APIRouter()
 

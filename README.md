@@ -1,7 +1,7 @@
 
-# Proyecto Base con FastAPI para Detección de Texto en PDFs para Sitrans
+# Proyecto Base con FastAPI para Detección/Extracción de Texto en PDFs para Sitrans
 
-Este proyecto es una estructura base para una aplicación web desarrollada con **FastAPI**, organizada en módulos y con soporte para Docker y CI/CD.
+Este proyecto es una estructura base para una API/Rest desarrollada con **FastAPI**, organizada en módulos y con soporte para Docker y CI/CD.
 
 ## Funcionalidad
 

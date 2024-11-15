@@ -5,11 +5,11 @@ Este proyecto es una estructura base para una API/Rest desarrollada con **FastAP
 
 ## Funcionalidad
 
-Paso 1: Validar y clasificar la solicitud.
-Paso 2: Descargar el/los PDF desde la URL proporcionada.
-Paso 3: Convertir el/los PDF en imágenes para procesar con ChatGPT y/o Document Intelligence.
-Paso 4: Generar el/los JSON con los datos extraídos.
-Paso 5: Devolver la respuesta al cliente y/o almacenarla.
+- **`Paso 1:`** Validar y clasificar la solicitud.
+- **`Paso 2:`** Descargar el/los PDF desde la URL proporcionada.
+- **`Paso 3:`** Convertir el/los PDF en imágenes para procesar con ChatGPT y/o Document Intelligence.
+- **`Paso 4:`** Generar el/los JSON con los datos extraídos.
+- **`Paso 5:`** Devolver la respuesta al cliente y/o almacenarla.
 
 
 ## Estructura del Proyecto

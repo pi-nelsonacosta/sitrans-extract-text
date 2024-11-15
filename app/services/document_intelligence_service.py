@@ -7,6 +7,7 @@ from fastapi import HTTPException
 from app.business.convert_pdf_to_image import convert_pdf_image
 from app.services.external_services.azure_openai_service import call_azure_openai, call_azure_openai_DIN
 from app.business.prompts.prompts_extract import prompt_aforo, prompt_tgr, prompt_din
+import httpx
 
 async def organize_extracted_text_AFORO(file_content: bytes):
     try:
@@ -80,6 +81,55 @@ async def organize_extracted_text_DIN(file_content):
         # Registrar el error y no interrumpir el flujo de la tarea
         print(f"Error al procesar el PDF en segundo plano: {str(e)}")
         return None
+
+async def process_file_input(url: str = None, uploaded_file = None):
+    # Verificar si se proporcionó una URL o se cargó un archivo
+    if url and uploaded_file:
+        raise HTTPException(
+            status_code=400,
+            detail="No se puede procesar ambos: URL y archivo cargado. Proporcione solo uno."
+        )
+    elif not url and not uploaded_file:
+        raise HTTPException(
+            status_code=400,
+            detail="Debe proporcionar una URL o subir un archivo."
+        )
+
+    # Obtener el contenido del archivo desde la URL
+    if url:
+        print(f"Intentando descargar archivo desde URL: {url}")
+        async with httpx.AsyncClient(follow_redirects=True) as client:  # Seguir redirecciones
+            response = await client.get(url)
+
+            # Manejar errores HTTP
+            if response.status_code != 200:
+                raise HTTPException(
+                    status_code=400,
+                    detail="No se pudo descargar el archivo desde la URL."
+                )
+
+            # Obtener el contenido descargado
+            file_content = response.content
+
+            # Validar si el archivo descargado es un PDF
+            if not file_content.startswith(b"%PDF"):
+                raise HTTPException(
+                    status_code=400,
+                    detail="El archivo descargado no es un PDF válido. Verifique la URL."
+                )
+
+    # Obtener el contenido del archivo subido
+    elif uploaded_file:
+        file_content = await uploaded_file.read()
+
+        # Validar si el archivo subido es un PDF
+        if not file_content.startswith(b"%PDF"):
+            raise HTTPException(
+                status_code=400,
+                detail="El archivo subido no es un PDF válido."
+            )
+
+    return file_content    
 
 
 

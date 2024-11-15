@@ -1,24 +1,20 @@
 import os
 from dotenv import load_dotenv
 
-# Cargar las variables del archivo .env
+# Cargar variables desde el archivo .env
 load_dotenv()
 
-# Configuración para Azure OpenAI utilizando las variables del entorno
 LLM_CONFIG = {
-    "cache_seed": int(os.getenv("CACHE_SEED", 42)),  # Valor por defecto: 42
-    "temperature": float(os.getenv("TEMPERATURE", 0)),  # Valor por defecto: 0
+    "cache_seed": 42,
+    "temperature": 0,
     "config_list": [
         {
-            'model': os.getenv("MODEL"),
-            'api_key': os.getenv("API_KEY"),
-            'azure_endpoint': os.getenv("AZURE_ENDPOINT"),
-            'api_type': os.getenv("API_TYPE"),
-            'api_version': os.getenv("API_VERSION")
+            'api_key': os.getenv("OPENAI_API_KEY"),  # Clave de API desde el entorno
+            'azure_endpoint': os.getenv("AZURE_OPENAI_ENDPOINT"),  # Endpoint de Azure OpenAI
+            'api_type': "azure",  # Tipo de API (Azure)
+            'api_version': "2023-03-15-preview",  # Versión de la API
+            'model': os.getenv("MODEL")  # Nombre del despliegue
         }
     ],
-    "timeout": int(os.getenv("TIMEOUT", 120))  # Valor por defecto: 120
+    "timeout": 120  # Tiempo de espera
 }
-
-# Verifica la configuración
-print(LLM_CONFIG)

@@ -5,17 +5,8 @@ import numpy as np
 import os
 from fastapi import HTTPException
 from app.business.convert_pdf_to_image import convert_pdf_image
-from app.services.external_services.azure_openai_service import call_azure_openai
-from app.business.prompts.prompts_extract import prompt_aforo, prompt_tgr
-from dotenv import load_dotenv
-from openai import OpenAI
-import openai
-
-# Cargar las variables del archivo .env
-load_dotenv()
-
-openai.api_key = os.getenv("OPENAI_API_KEY")
-client = OpenAI()
+from app.services.external_services.azure_openai_service import call_azure_openai, call_azure_openai_DIN
+from app.business.prompts.prompts_extract import prompt_aforo, prompt_tgr, prompt_din
 
 async def organize_extracted_text_AFORO(file_content: bytes):
     try:
@@ -78,9 +69,12 @@ async def organize_extracted_text_DIN(file_content):
 
         # Combinar el texto extraído de todas las páginas
         texto_final = "\n".join(texto_extraido)
-        print(texto_final)
-
-        return texto_final
+        
+        # Imprime la respuesta cruda para depuración
+        response = await call_azure_openai_DIN(prompt_din, texto_final)
+        print("Respuesta cruda de GPT:", response)
+      
+        return response
 
     except Exception as e:
         # Registrar el error y no interrumpir el flujo de la tarea

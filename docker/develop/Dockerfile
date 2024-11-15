@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-transport-https \
     tesseract-ocr \
     libtesseract-dev \
-    poppler-utils \ 
+    poppler-utils \
     && curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
     && curl https://packages.microsoft.com/config/debian/10/prod.list > /etc/apt/sources.list.d/mssql-release.list \
     && apt-get update && ACCEPT_EULA=Y apt-get install -y msodbcsql17 mssql-tools \
@@ -34,6 +34,12 @@ COPY ./requirements.txt /app/requirements.txt
 RUN pip install --upgrade pip && \
     pip install -r /app/requirements.txt
 
+# Instalar OpenAI y ejecutar openai migrate
+RUN pip install --upgrade openai
+
+# Ejecutar openai migrate para actualizar el código
+RUN openai migrate || echo "El proceso de migración ha fallado, se debe realizar manualmente."
+
 # Copiar los archivos del proyecto al contenedor
 COPY ./app /app/app
 COPY ./main.py /app/main.py
@@ -43,6 +49,7 @@ EXPOSE 8000
 
 # Comando para ejecutar la API con Gunicorn con Uvicorn Workers
 CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "-w", "4", "-b", "0.0.0.0:8000", "main:app"]
+
 
 
 

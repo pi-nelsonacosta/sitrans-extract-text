@@ -1,64 +1,89 @@
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Response, Query
-from app.services.document_intelligence_service import handle_din_extraction 
-from app.services.document_intelligence_service import handle_extract_aforo_text 
-from app.services.document_intelligence_service import handle_extract_text_tgr 
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Response, Query, UploadFile, File, Form
+from enum import Enum
 import httpx
+from app.services.document_intelligence_service import organize_extracted_text_AFORO
+from app.services.document_intelligence_service import organize_extracted_text_DIN
+from app.services.document_intelligence_service import organize_extracted_text_TGR
 
 router = APIRouter()
 
-# Ruta para manejar la subida de imágenes y ejecutar la extracción y procesamiento en segundo plano con pytesseract
+# Definir una enumeración para los tipos de archivo permitidos
+class FileType(str, Enum):
+    AFORO = "AFORO"
+    TGR = "TGR"
+    DIN = "DIN"
+
+# Ruta para manejar la subida de imágenes o la descarga desde una URL
 @router.post("/extract-text-sitrans/")
 async def extract_text_sitrans(
     background_tasks: BackgroundTasks,
-    url: str = Query(..., description="URL directa del archivo PDF o imagen"),  # URL requerida
-    file_type: str = Query(..., description="Tipo de archivo: AFORO, TGR, DIN")  # Tipo de archivo requerido
+    file_type: FileType = Form(..., description="Tipo de archivo"),  # Tipo de archivo requerido como Enum
+    url: str = Form(None, description="URL directa del archivo PDF o imagen (opcional)"),  # URL opcional
+    uploaded_file: UploadFile = File(None, description="Archivo PDF o imagen (opcional)"),  # Archivo opcional
 ):
     """
-    Procesa un archivo PDF o imagen descargado desde una URL para extraer texto.
+    Procesa un archivo PDF o imagen descargado desde una URL o subido directamente para extraer texto.
     """
     try:
-        print(f"Intentando descargar archivo desde URL: {url}")
+        # Verificar si se proporcionó una URL o se cargó un archivo
+        if url and uploaded_file:
+            raise HTTPException(
+                status_code=400,
+                detail="No se puede procesar ambos: URL y archivo cargado. Proporcione solo uno."
+            )
+        elif not url and not uploaded_file:
+            raise HTTPException(
+                status_code=400,
+                detail="Debe proporcionar una URL o subir un archivo."
+            )
 
-        async with httpx.AsyncClient(follow_redirects=True) as client:  # Seguir redirecciones
-            response = await client.get(url)
+        # Obtener el contenido del archivo desde la URL
+        if url:
+            print(f"Intentando descargar archivo desde URL: {url}")
 
-            # Manejar errores HTTP
-            if response.status_code != 200:
-                raise HTTPException(
-                    status_code=400,
-                    detail="No se pudo descargar el archivo desde la URL."
-                )
+            async with httpx.AsyncClient(follow_redirects=True) as client:  # Seguir redirecciones
+                response = await client.get(url)
 
-            # Obtener el contenido descargado
-            file_content = response.content
+                # Manejar errores HTTP
+                if response.status_code != 200:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="No se pudo descargar el archivo desde la URL."
+                    )
 
-            # Validar si el archivo descargado es un PDF
+                # Obtener el contenido descargado
+                file_content = response.content
+
+                # Validar si el archivo descargado es un PDF
+                if not file_content.startswith(b"%PDF"):
+                    raise HTTPException(
+                        status_code=400,
+                        detail="El archivo descargado no es un PDF válido. Verifique la URL."
+                    )
+        # Obtener el contenido del archivo subido
+        elif uploaded_file:
+            file_content = await uploaded_file.read()
+
+            # Validar si el archivo subido es un PDF
             if not file_content.startswith(b"%PDF"):
                 raise HTTPException(
                     status_code=400,
-                    detail="El archivo descargado no es un PDF válido. Verifique la URL."
+                    detail="El archivo subido no es un PDF válido."
                 )
 
         # Procesar el archivo dependiendo del tipo
-        if file_type == "AFORO":
-            await handle_extract_aforo_text(file_content)
-        elif file_type == "TGR":
-            await handle_extract_text_tgr(file_content)
-        elif file_type == "DIN":
-            await handle_din_extraction(
-                background_tasks,
-                file_content,
-                "archivo_descargado.pdf",
-                True
-            )
+        if file_type == FileType.AFORO:
+            response = await organize_extracted_text_AFORO(file_content)
+            return response
+        elif file_type == FileType.TGR:
+            response = await organize_extracted_text_TGR(file_content)
+            return response
+        elif file_type == FileType.DIN:
+           response = await organize_extracted_text_DIN(file_content)
+           return response
         else:
             raise HTTPException(status_code=400, detail="Tipo de archivo no soportado.")
-
-        return Response(
-            content=f'{{"status": "El texto OCR de tipo {file_type} está siendo extraído y procesado en segundo plano."}}',
-            media_type="application/json",
-            status_code=202
-        )
+        
     except Exception as e:
         print(f"Error inesperado: {str(e)}")
         raise HTTPException(

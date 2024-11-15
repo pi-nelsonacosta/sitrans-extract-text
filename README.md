@@ -1,7 +1,16 @@
 
-# Proyecto Base con FastAPI para Detección de Texto en PDFs e Imágenes
+# Proyecto Base con FastAPI para Detección de Texto en PDFs para Sitrans
 
-Este proyecto es una estructura base para una aplicación web desarrollada con **FastAPI**, organizada en módulos y con soporte para Docker y CI/CD. 
+Este proyecto es una estructura base para una aplicación web desarrollada con **FastAPI**, organizada en módulos y con soporte para Docker y CI/CD.
+
+## Funcionalidad
+
+Paso 1: Validar y clasificar la solicitud.
+Paso 2: Descargar el/los PDF desde la URL proporcionada.
+Paso 3: Convertir el/los PDF en imágenes para procesar con ChatGPT y/o Document Intelligence.
+Paso 4: Generar el/los JSON con los datos extraídos.
+Paso 5: Devolver la respuesta al cliente y/o almacenarla.
+
 
 ## Estructura del Proyecto
 
@@ -32,9 +41,8 @@ main.py
 
 ## Requisitos Previos
 
-- **Python 3.8+**
-- **Docker** (opcional para entornos contenedorizados)
-- **Poetry** o **pip** para la gestión de dependencias.
+- **Python 3.10+** (para instalar Python, puedes descargar desde [aquí](https://www.python.org/downloads/)).
+- **Docker** (obligatorio para entornos contenedorizados). Lo podes descargar desde [aquí](https://www.docker.com/products/docker-desktop/).
 
 ## Instalación y Configuración
 
@@ -46,11 +54,12 @@ Clona este repositorio en tu máquina local:
 git clone <url-del-repositorio>
 cd <nombre-del-proyecto>
 ```
-### 2. Uso de Docker
+### 2. Uso de Docker - Para iniciar el entorno de desarrollo/testing
 
-Si deseas usar Docker para la ejecución del proyecto, hay tres entornos disponibles: desarrollo, testing, y producción. Para cada entorno puedes encontrar un `Dockerfile` y un archivo `docker-compose.yml` en el directorio `docker/`.
+Paso previo, debemos tener instalado Docker en nuestro sistema.
+Vamos a usar Docker para la ejecución del proyecto, hay tres entornos disponibles: desarrollo, testing, y producción. Para cada entorno puedes encontrar un `Dockerfile` y un archivo `docker-compose.yml` en el directorio `docker/`.
 
-Ejemplo para desarrollo:
+Ejemplo para desarrollo (que es normalmente lo que se usará en el entorno de desarrollo):
 
 ```bash
 docker-compose -f docker/develop/docker-compose.yml up --build
@@ -65,7 +74,7 @@ Este proyecto incluye un archivo `.gitignore` que asegura que no se suban archiv
 - **`__pycache__/`**: Archivos cacheados por Python.
 - **Archivos de configuración de IDEs**: Para que las configuraciones locales no se incluyan en el repositorio.
 
-Esto iniciará el servidor de FastAPI y la aplicación estará disponible en `http://127.0.0.1:8000/`.
+Esto iniciará el servidor de FastAPI y la aplicación estará disponible en `http://localhost:8000/docs`.
 
 ## Pruebas
 

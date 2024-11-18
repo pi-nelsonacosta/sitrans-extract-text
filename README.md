@@ -64,6 +64,7 @@ Ejemplo para desarrollo (que es normalmente lo que se usará en el entorno de de
 ```bash
 docker-compose -f docker/develop/docker-compose.yml up --build
 ```
+Quiero agregar que esta instalacion puede demorar porque para hacer uso de EASY-OCR es necesario descargar el modelo de OCR, que puede llegar a ser de 1GB. Tengamos en cuenta que es un ambiente de desarrollo y no se debe usar en producción. Para produccion vamos a usar Document Intelligence de Azure.
 
 ## .gitignore
 
